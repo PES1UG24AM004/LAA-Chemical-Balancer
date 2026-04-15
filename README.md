@@ -1,47 +1,141 @@
-# Chemical Equation Balancer: A Linear Algebra Approach
+# Chemical Equation Balancer
 
-A graphical Python application that leverages core linear algebra concepts—specifically Null Space and Least Squares Approximation—to balance chemical equations and recover stoichiometric ratios from noisy sensor data.
+A Python/tkinter application demonstrating two linear algebra techniques — **Null Space** and **Least Squares** — applied to chemical equation balancing and stoichiometric ratio recovery from noisy sensor data.
 
-This project was developed as a miniproject for the Linear Algebra and its Applications (LAA) coursework.
+Developed for **UE24MA241B — Linear Algebra and its Applications**.
+
+---
 
 ## The Mathematics
 
-This project is divided into two primary modules, demonstrating different applications of linear algebra in computational chemistry.
+| | Problem | Technique | Solver |
+|---|---|---|---|
+| **Act 1** | Find stoichiometric coefficients | Null space of `Ax = 0` | `scipy.linalg.null_space` |
+| **Act 2** | Recover ratios from noisy readings | Least squares on `Ax ≈ b` | `numpy.linalg.lstsq` |
 
-### Act 1: Exact Balancing via Null Space
+### Act 1 — Null Space
 
-In a perfectly balanced chemical equation, the Law of Conservation of Mass dictates that the number of atoms for each element must be equal on both the reactant and product sides. We can represent this as a homogeneous system of linear equations:
+Conservation of mass requires that atom counts balance across both sides of a reaction. This is encoded as a homogeneous linear system `Ax = 0`, where:
 
-Ax = 0
+- **A**: atom-count matrix (rows = elements, columns = molecules; reactant columns positive, product columns negative)
+- **x**: unknown stoichiometric coefficients
 
-- A: The atom count matrix. Rows represent individual elements, and columns represent molecules. Reactant counts are positive, and product counts are negative.
-- x: The vector of unknown stoichiometric coefficients required to balance the equation.
+The null space of **A** contains all vectors **x** satisfying this constraint. The first basis vector is scaled to the smallest positive integers to yield the balanced equation.
 
-By computing the null space of matrix A (utilizing `scipy.linalg.null_space`), the application identifies the basis vector x that perfectly satisfies the homogeneous system. This floating-point vector is then algorithmically scaled into minimal whole integers to conform to standard chemical notation.
+**Example — Methane combustion:**
 
-### Act 2: Real-World Sensor Data via Least Squares
+```
+         CH4   O2   CO2   H2O
+   C  [  1     0   -1     0  ]
+   H  [  4     0    0    -2  ]
+   O  [  0     2   -2    -1  ]
+```
 
-In physical chemistry experiments, sensor readings for molecule concentrations are inherently noisy. Multiple sensor readings generate an overdetermined system with no exact solution:
+Null space → `[1, 2, 1, 2]` → **CH₄ + 2O₂ → CO₂ + 2H₂O** ✓
 
-Ax ≈ b
+### Act 2 — Least Squares
 
-- A: A matrix of noisy sensor readings for each molecule across multiple experimental trials.
-- b: The total sum of the readings for each trial.
+Real sensors introduce noise, producing an overdetermined system (`Ax ≈ b`) with no exact solution. The app minimises the squared residual `‖Ax − b‖²` via the normal equations:
 
-Because an exact intersection does not exist, the application finds the vector x that minimizes the squared error ||Ax - b||^2. The algorithm computes the Least Squares solution by determining the normal equations:
+$$x = (A^T A)^{-1} A^T b$$
 
-x = (A^T A)^-1 A^T b
+Recovered ratios are compared against the Act 1 ground truth to demonstrate reconstruction accuracy under noise.
 
-This approach allows the system to successfully recover the true underlying stoichiometric ratios despite randomized measurement noise.
+---
 
-## Technical Stack & Libraries
+## Features
 
-- NumPy: Utilized for matrix manipulations, dynamic array handling, and executing the least squares approximation (`numpy.linalg.lstsq`).
-- SciPy: Utilized for extracting the exact basis vectors of the homogeneous systems (`scipy.linalg.null_space`).
-- Tkinter: The standard GUI library for Python, used to construct the interactive graphical interface.
+- **6 built-in reactions** — NH₃ combustion, H₂ combustion, CH₄ combustion, photosynthesis, propane combustion, H₂SO₄ acid-base
+- **Custom equation builder** — add/remove reactants, products, and elements; edit the atom-count matrix directly
+- **Signed matrix display** — see exactly what is passed to the solver
+- **Atom-by-atom verification table** — confirms conservation for every element
+- **Interactive sensor grid** — view and edit noisy readings before solving
+- **Bar chart comparison** — recovered vs. true ratios for each molecule
+- **Residual readout** — quantifies noise and recovery quality
+- **Adjustable parameters** — noise level (0–50%) and number of readings (5, 8, 12, or 20)
+
+---
+
+## Getting Started
+
+**Prerequisites:** Python 3.9+, pip
+
+```bash
+pip install numpy scipy
+```
+
+> On some Linux distributions, tkinter must be installed separately:
+> ```bash
+> sudo apt-get install python3-tk
+> ```
+
+**Run (script):**
+```bash
+python chemical_balancer.py
+```
+
+**Run (notebook):**
+
+Open `chemical_balancer.ipynb` in Jupyter and run all cells. Each section of the code is in its own cell. Launch the app by running the final cell.
+
+---
+
+## How to Use
+
+**Act 1 — Balance an equation**
+
+1. Select a preset reaction, or click `+ Reactant` / `+ Product` and `+ Add Element` to build your own.
+2. Fill in the atom count matrix (positive integers only — signs are applied automatically).
+3. Click **✓ Solve — Find Null Space**.
+4. The balanced equation and verification table appear below.
+
+**Act 2 — Sensor recovery**
+
+1. After solving Act 1, click **Open Act 2 →**.
+2. Adjust noise level and reading count, then click **Generate Readings**.
+3. Click **✓ Solve — Least Squares**.
+4. Bar charts show recovered vs. true ratios; the residual norm indicates recovery quality.
+
+---
+
+## Project Structure
+
+```
+chemical-balancer/
+├── chemical_balancer.ipynb   # Notebook: one cell per logical section
+├── chemical_balancer.py      # Equivalent single-file script
+└── README.md
+```
+
+**Notebook cell layout:**
+
+| Cell | Contents |
+|---|---|
+| Imports | Standard library and third-party imports |
+| Theme & Constants | Colour palette and layout padding |
+| Examples | 6 predefined reactions |
+| Math Engine | `_to_integers`, `build_signed_matrix`, `solve_null_space`, `solve_least_squares`, `generate_sensor_readings` |
+| UI Helpers | `styled_btn`, `make_card`, `scrollable_frame` |
+| Act 2 Window | `Act2Window` class |
+| Act 1 Main Window | `ChemicalBalancerApp` class |
+| Launch | `app.mainloop()` |
+
+---
+
+## Technical Stack
+
+| Library | Usage |
+|---|---|
+| **NumPy** | Matrix operations, `linalg.lstsq` for least squares |
+| **SciPy** | `linalg.null_space` for null space computation |
+| **Tkinter** | Cross-platform GUI |
+
+---
 
 ## Team Members
 
-- Aarav Yuval (PES1UG24AM004)
-- A Ravi Teja (PES1UG24AM001)
-- Ahan A Mysore (PES1UG24AM019)
+| Name | USN |
+|---|---|
+| Aarav Yuval | PES1UG24AM004 |
+| A Ravi Teja | PES1UG24AM001 |
+| Ahan A Mysore | PES1UG24AM019 |
